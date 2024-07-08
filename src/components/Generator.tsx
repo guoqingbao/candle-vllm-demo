@@ -112,36 +112,37 @@ export default () => {
         }),
         signal: controller.signal,
       })
-      if (!response.ok) {
-        const error = await response.json()
-        console.error(error.error)
-        setCurrentError(error.error)
-        throw new Error('Request failed')
-      }
-      const data = response.body
-      if (!data)
-        throw new Error('No data')
-
-      const reader = data.getReader()
-      const decoder = new TextDecoder('utf-8')
-      let done = false
-
-      while (!done) {
-        const { value, done: readerDone } = await reader.read()
-        if (value) {
-          const char = decoder.decode(value)
-          if (char === '\n' && currentAssistantMessage().endsWith('\n'))
-            continue
-
-          if (char)
-            setCurrentAssistantMessage(currentAssistantMessage() + char)
-
-          isStick() && instantToBottom()
+      if (response.ok) {
+        const data = response.body
+        if (!data)
+          throw new Error('No data')
+  
+        const reader = data.getReader()
+        const decoder = new TextDecoder('utf-8')
+        let done = false
+  
+        while (!done) {
+          const { value, done: readerDone } = await reader.read()
+          if (value) {
+            const char = decoder.decode(value)
+            if (char === '\n' && currentAssistantMessage().endsWith('\n'))
+              continue
+  
+            if (char)
+              setCurrentAssistantMessage(currentAssistantMessage() + char)
+  
+            isStick() && instantToBottom()
+          }
+          done = readerDone
         }
-        done = readerDone
+      } else {
+        setCurrentError({code: "Error response", message: await response.json() })
+        setLoading(false)
+        setController(null)
+        return
       }
     } catch (e) {
-      console.error(e)
+      setCurrentError({code: "Error response", message: e })
       setLoading(false)
       setController(null)
       return
